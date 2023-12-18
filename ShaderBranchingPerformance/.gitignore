@@ -83,3 +83,6 @@ crashlytics-build.properties
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+
+.utmp/
