@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/ShaderBranchingPerformance/BranchingTexture.unity
+    guid: 65939a01a433b2e4cbb2ab5e3650d8aa
+  - enabled: 1
     path: Assets/ShaderBranchingPerformance/Branching.unity
     guid: d2ba8fbc67f8b5443bacc801b01e1ada
   m_configObjects: {}

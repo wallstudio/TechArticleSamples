@@ -1,0 +1,81 @@
+#pragma kernel STATIC_FAST CSMain=STATIC_FAST PATH_STATIC_FAST BRANCH
+#pragma kernel STATIC_SLOW CSMain=STATIC_SLOW PATH_STATIC_SLOW BRANCH
+#pragma kernel UNIFORM_BRANCH CSMain=UNIFORM_BRANCH PATH_UNIFORM BRANCH
+#pragma kernel UNIFORM_FLATTEN CSMain=UNIFORM_FLATTEN PATH_UNIFORM FLATTEN
+#pragma kernel DIVERGENT_BRANCH CSMain=DIVERGENT_BRANCH PATH_DIVERGENT BRANCH
+#pragma kernel DIVERGENT_FLATTEN CSMain=DIVERGENT_FLATTEN PATH_DIVERGENT FLATTEN
+
+#pragma enable_d3d11_debug_symbols
+
+Texture2D<float> _Input; SamplerState sampler_linear_repeat; uint _Input_Width, _Input_Height;
+RWStructuredBuffer<float> _Output;
+uint _Uniform;
+uint _DivergentFastInterval;
+
+float Fetch(float u);
+
+[numthreads(32, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    bool fast;
+    {
+#if defined(PATH_STATIC_FAST)
+        fast = true;
+#elif defined(PATH_STATIC_SLOW)
+        fast = false;
+#endif
+
+#if defined(PATH_UNIFORM)
+        fast = _Uniform == 0;
+#endif
+
+#if defined(PATH_DIVERGENT)
+        // _DivergentFastIntervalスレッドに一つだけSlowパスを通す
+        fast = id.x % _DivergentFastInterval != (_DivergentFastInterval - 1);
+#endif
+    }
+
+    float u = id.x / (float)_Input_Width;
+
+    float r;
+    {
+#if defined(BRANCH)
+        [branch]
+#elif defined(FLATTEN)
+        [flatten]
+#endif
+        if(fast)
+            r = u; // fast
+        else
+            r = Fetch(u); // slow
+    }
+    _Output[id.x] = r;
+}
+
+float Fetch(float u)
+{
+    float r = 0;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.00), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.05), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.10), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.15), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.20), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.25), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.30), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.35), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.40), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.45), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.50), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.55), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.60), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.65), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.70), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.75), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.80), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.85), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.90), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 0.95), 0).r;
+    r += _Input.SampleLevel(sampler_linear_repeat, float2(u, 1.00), 0).r;
+    r /= 20;
+    return r;
+}
