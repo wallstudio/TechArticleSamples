@@ -1,0 +1,67 @@
+#pragma kernel STATIC_FAST CSMain=STATIC_FAST PATH_STATIC_FAST
+#pragma kernel STATIC_SLOW CSMain=STATIC_SLOW PATH_STATIC_SLOW
+#pragma kernel UNIFORM_BRANCH CSMain=UNIFORM_BRANCH PATH_UNIFORM BRANCH
+#pragma kernel UNIFORM_FLATTEN CSMain=UNIFORM_FLATTEN PATH_UNIFORM FLATTEN
+#pragma kernel DIVERGENT_BRANCH CSMain=DIVERGENT_BRANCH PATH_DIVERGENT BRANCH
+#pragma kernel DIVERGENT_FLATTEN CSMain=DIVERGENT_FLATTEN PATH_DIVERGENT FLATTEN
+
+#pragma enable_d3d11_debug_symbols
+
+StructuredBuffer<float> _Input;
+RWStructuredBuffer<float> _Output;
+uint _Uniform;
+uint _DivergentFastInterval;
+
+float CalcExp(float x);
+
+[numthreads(32, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    bool fast;
+    {
+#if defined(PATH_STATIC_FAST)
+        fast = true;
+#elif defined(PATH_STATIC_SLOW)
+        fast = false;
+#endif
+
+#if defined(PATH_UNIFORM)
+        fast = _Uniform == 0;
+#endif
+
+#if defined(PATH_DIVERGENT)
+        // _DivergentFastIntervalスレッドに一つだけSlowパスを通す
+        fast = id.x % _DivergentFastInterval != (_DivergentFastInterval - 1);
+#endif
+    }
+
+    float v = _Input[id.x];
+    {
+#if defined(BRANCH)
+        [branch]
+#elif defined(FLATTEN)
+        [flatten]
+#endif
+        if(fast)
+            v = exp(v); // fast
+        else
+            v = CalcExp(v); // slow
+    }
+    _Output[id.x] = v;
+}
+
+
+float CalcExp(float x)
+{
+    float denom = 1;
+    float e_0 = 1;
+    float e = e_0;
+
+    for(uint i = 1; i < 10000 ; i++)
+    {
+        denom *= i;
+        e += e_0 * pow(abs(x), i) / denom;
+    }
+
+    return e;
+}
