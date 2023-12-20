@@ -25,13 +25,17 @@ class Legacy
         }
 
         {
-            var VertexType = typeof(Flex<,>).MakeGenericType(
-                typeof(Vector3),
-                typeof(Flex<,>).MakeGenericType(
-                    typeof(Vector2),
-                    typeof(Vector4)));
+            var typeList = new List<Type>() 
+            {
+                typeof(Vector3), typeof(Vector2), typeof(Vector4),
+            };
+            Type vertexType = typeList.AsEnumerable()
+                .Reverse()
+                .Skip(2)
+                .Aggregate(typeof(Flex<,>)
+                .MakeGenericType(typeList[^2], typeList[^1]), (acc, t) => typeof(Flex<,>).MakeGenericType(t, acc));
             var vertex_012 = typeof(Legacy).GetMethod(nameof(Lerp), BindingFlags.Static | BindingFlags.NonPublic)!
-                .MakeGenericMethod(VertexType)
+                .MakeGenericMethod(vertexType)
                 .Invoke(null, [vertex0, vertex1, 0.5f, vertex2, 0.5f, ]);    
             Console.WriteLine($"Size of {vertex_012!.GetType()} is {Marshal.SizeOf(vertex_012)}\n[{vertex_012}]");
         }

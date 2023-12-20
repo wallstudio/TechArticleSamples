@@ -32,17 +32,18 @@ class Modern
         }
 
         {
-            var VertexType = typeof(Flex<,>).MakeGenericType(
-                typeof(float),
-                typeof(Flex<,>).MakeGenericType(
-                    typeof(float),
-                    typeof(Flex<,>).MakeGenericType(
-                        typeof(float),
-                        typeof(Flex<,>).MakeGenericType(
-                            typeof(float),
-                            typeof(float)))));
+            var typeList = new List<Type>()
+            {
+                typeof(float), typeof(float), typeof(float),
+                typeof(float), typeof(float),
+            };
+            Type vertexType = typeList.AsEnumerable()
+                .Reverse()
+                .Skip(2)
+                .Aggregate(typeof(Flex<,>)
+                .MakeGenericType(typeList[^2], typeList[^1]), (acc, t) => typeof(Flex<,>).MakeGenericType(t, acc));
             var vertex_012 = typeof(Modern).GetMethod(nameof(Lerp), BindingFlags.Static | BindingFlags.NonPublic)!
-                .MakeGenericMethod(VertexType)
+                .MakeGenericMethod(vertexType)
                 .Invoke(null, [vertex0, vertex1, 0.5f, vertex2, 0.5f, ]);    
             Console.WriteLine($"Size of {vertex_012!.GetType()} is {Marshal.SizeOf(vertex_012)}\n[{vertex_012}]");
         }
