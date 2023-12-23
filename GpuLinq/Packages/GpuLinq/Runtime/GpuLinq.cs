@@ -19,14 +19,15 @@ namespace Uphash
     {
         static readonly Lazy<ShaderLibrary> shaderLibrary = new(ShaderLibrary.Load);
 
-        public static IGpuEnumerable<T> AsGpuEnumerable<T>(this IEnumerable<T> source) where T : unmanaged => new GpuLinqEnumerable<T>(source);
+        public static IGpuEnumerable<T> AsGpuEnumerable<T>(this IEnumerable<T> source) where T : unmanaged
+            => new LazyGpuEnumerable<T>("AsGpuEnumerable", new (() => source.ToArray()));
 
         public static IGpuEnumerable<T> Where<T>(
             this IGpuEnumerable<T> source, Func<T, bool> _,
             [CallerFilePath] string file = null, [CallerMemberName] string member = null, [CallerLineNumber] int line = 0)
             where T : unmanaged
         {
-            return new LazyEnumerable<T>("Where", new (() => Dispatch<T, T>(source, useCounter: true, file, member, line)));
+            return new LazyGpuEnumerable<T>("Where", new (() => Dispatch<T, T>(source, useCounter: true, file, member, line)));
         }
 
         public static IGpuEnumerable<U> Select<T, U>(
@@ -34,7 +35,7 @@ namespace Uphash
             [CallerFilePath] string file = null, [CallerMemberName] string member = null, [CallerLineNumber] int line = 0)
             where T : unmanaged where U : unmanaged
         {
-            return new LazyEnumerable<U>("Select", new (() => Dispatch<T, U>(source, useCounter: false, file, member, line)));
+            return new LazyGpuEnumerable<U>("Select", new (() => Dispatch<T, U>(source, useCounter: false, file, member, line)));
         }
 
         static unsafe U[] Dispatch<T, U>(
@@ -70,20 +71,12 @@ namespace Uphash
             return outputArr;
         }
 
-        class GpuLinqEnumerable<T> : IGpuEnumerable<T> where T : unmanaged
-        {
-            public readonly IEnumerable<T> source;
-            public GpuLinqEnumerable(IEnumerable<T> source) => this.source = source;
-            public IEnumerator<T> GetEnumerator() => source.GetEnumerator();
-            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        }
-
-        readonly struct LazyEnumerable<T> : IGpuEnumerable<T> where T : unmanaged
+        readonly struct LazyGpuEnumerable<T> : IGpuEnumerable<T> where T : unmanaged
         {
             readonly string Name;
-            readonly Lazy<T[]> array;
-            public LazyEnumerable(string name, Lazy<T[]> array) => (this.array, Name) = (array, name);
-            public readonly IEnumerator<T> GetEnumerator() => array.Value.AsEnumerable().GetEnumerator();
+            readonly Func<T[]> array;
+            public LazyGpuEnumerable(string name, Func<T[]> array) => (this.array, Name) = (array, name);
+            public readonly IEnumerator<T> GetEnumerator() => array().AsEnumerable().GetEnumerator();
             readonly IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
     }
